@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦠 医学微生物个人工作台</title>
+    <style>
+        /* 《瑞鹤图》专属配色方案 */
+        :root {
+            --bg-color: #D1DBD6;        
+            --card-bg: #F7F9F6;         
+            --primary-color: #566d55;   
+            --secondary-color: #a0bd97; 
+            --accent-color: #bdb07d;    
+            --text-main: #2d230d;       
+            --text-sub: #6b736f;        
+            --shadow: 0 4px 20px rgba(45, 35, 13, 0.08);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 230px;
+            background: var(--card-bg);
+            padding: 20px 0;
+            box-shadow: 2px 0 15px rgba(45, 35, 13, 0.03);
+            z-index: 10;
+            border-right: 1px solid var(--accent-color);
+        }
+        .logo { 
+            font-size: 20px; font-weight: 800; color: var(--text-main); 
+            padding: 0 20px 30px; text-align: center; letter-spacing: 1px;
+        }
+        .nav-item {
+            padding: 15px 25px; font-size: 15px; color: var(--text-sub); cursor: pointer;
+            transition: 0.3s; border-left: 4px solid transparent; font-weight: 500;
+        }
+        .nav-item:hover { background: rgba(160, 189, 151, 0.15); }
+        .nav-item.active { 
+            background: rgba(86, 109, 85, 0.1); 
+            color: var(--primary-color); 
+            font-weight: bold; 
+            border-left-color: var(--primary-color); 
+        }
+
+        /* 主内容区 */
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; position: relative; }
+        .page-section { display: none; animation: fadeIn 0.4s ease; }
+        .page-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 通用卡片 */
+        .card {
+            background: var(--card-bg); border-radius: 20px; padding: 24px;
+            box-shadow: var(--shadow); margin-bottom: 24px; border: 1px solid rgba(189, 176, 125, 0.3);
+        }
+        .card-title {
+            font-size: 18px; color: var(--text-main); font-weight: bold;
+            margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px dashed var(--accent-color);
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        /* 胶囊按钮 & 输入框 */
+        button {
+            background: var(--primary-color); color: #fff; border: none;
+            padding: 10px 24px; border-radius: 50px; cursor: pointer;
+            font-weight: bold; transition: all 0.3s; box-shadow: 0 2px 8px rgba(86, 109, 85, 0.2);
+        }
+        button:hover { background: var(--secondary-color); transform: translateY(-1px); }
+        .btn-cancel { background: var(--accent-color); box-shadow: none; margin-right: 10px;}
+        .btn-cancel:hover { background: #a99c6b; }
+        
+        input[type="text"], textarea, select {
+            border: 1px solid var(--accent-color); border-radius: 12px; padding: 12px 16px;
+            outline: none; font-size: 14px; background: #FFF; transition: 0.3s; color: var(--text-main);
+        }
+        input[type="text"]:focus, textarea:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(160, 189, 151, 0.3); }
+
+        /* --- 首页专属样式 --- */
+        .hero-section {
+            background: linear-gradient(135deg, rgba(86, 109, 85, 0.1) 0%, rgba(189, 176, 125, 0.15) 100%);
+            border-radius: 20px; padding: 40px 30px; text-align: center;
+            margin-bottom: 24px; border: 1px dashed var(--accent-color);
+            position: relative; overflow: hidden;
+        }
+        .hero-date { font-size: 16px; color: var(--primary-color); font-weight: bold; margin-bottom: 20px; letter-spacing: 2px; }
+        .quote-text {
+            font-size: 22px; line-height: 1.6; color: var(--text-main);
+            font-family: "STSong", "SimSun", serif; /* 用宋体增加古风感 */
+            font-style: italic; margin-bottom: 15px;
+        }
+        .quote-author { font-size: 14px; color: var(--text-sub); text-align: right; padding-right: 20px;}
+        .quote-mark { font-size: 60px; color: rgba(189, 176, 125, 0.3); position: absolute; top: 10px; left: 20px; font-family: serif; line-height: 1; }
+        
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+        /* 1. 签到日历 */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; text-align: center; }
+        .cal-head { font-size: 14px; color: var(--text-sub); font-weight: bold; margin-bottom: 10px; }
+        .cal-day {
+            padding: 15px 0; border-radius: 12px; background: #FFF; cursor: pointer;
+            font-weight: bold; color: var(--text-sub); border: 1px solid rgba(189, 176, 125, 0.4); transition: 0.2s;
+        }
+        .cal-day:hover { background: var(--secondary-color); color: #FFF; border-color: var(--secondary-color); }
+        .cal-day.today { border: 2px solid var(--primary-color); color: var(--primary-color); }
+        .cal-day.checked { background: var(--primary-color); color: #FFF; border-color: var(--primary-color); }
+
+        /* 2. 发帖日记 */
+        .post-input-area {
+            background: #FFF; padding: 20px; border-radius: 15px; margin-bottom: 25px;
+            border: 2px dashed var(--accent-color); transition: 0.3s;
+        }
+        .post-input-area.editing { border-color: var(--primary-color); background: rgba(160, 189, 151, 0.05); }
+        .post-input-area input { width: 100%; margin-bottom: 12px; }
+        .post-input-area textarea { width: 100%; height: 90px; resize: none; margin-bottom: 12px; }
+        
+        .post-list .post-item {
+            background: #FFF; padding: 20px; border-radius: 15px; margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(45, 35, 13, 0.04); position: relative;
+            border: 1px solid rgba(189, 176, 125, 0.2);
+        }
+        .post-header { font-size: 16px; font-weight: bold; color: var(--primary-color); margin-bottom: 8px; padding-right: 120px;}
+        .post-actions { position: absolute; top: 20px; right: 20px; display: flex; gap: 8px; }
+        .action-btn {
+            background: transparent; box-shadow: none; padding: 4px 10px; font-size: 12px;
+            color: var(--text-sub); border: 1px solid rgba(189, 176, 125, 0.5);
+        }
+        .action-btn:hover { background: rgba(189, 176, 125, 0.1); color: var(--text-main); transform: none; }
+        .action-btn.delete:hover { background: #FFEBEE; color: #D32F2F; border-color: #FFCDD2;}
+
+        .post-time { font-size: 12px; color: var(--text-sub); margin-bottom: 12px; }
+        .post-content { font-size: 14px; line-height: 1.7; margin-bottom: 15px; white-space: pre-wrap; }
+        
+        .reply-list { background: rgba(160, 189, 151, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+        .reply-item { font-size: 13px; margin-bottom: 8px; color: var(--text-main); }
+        .reply-item:last-child { margin-bottom: 0; }
+        .reply-item strong { color: var(--primary-color); }
+        .reply-input-group { display: flex; gap: 10px; }
+        .reply-input-group input { flex: 1; padding: 10px 15px; font-size: 13px; border-radius: 50px; }
+        .reply-input-group button { padding: 8px 20px; font-size: 13px;}
+
+        /* 3. 周视图待办 */
+        .week-view { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-top: 20px; }
+        .day-column {
+            background: #FFF; border-radius: 15px; padding: 15px 10px; min-height: 350px;
+            border-top: 4px solid var(--primary-color);
+            border-left: 1px solid rgba(189, 176, 125, 0.2); border-right: 1px solid rgba(189, 176, 125, 0.2); border-bottom: 1px solid rgba(189, 176, 125, 0.2);
+        }
+        .day-column h3 { font-size: 14px; color: var(--primary-color); text-align: center; margin-bottom: 15px; font-weight: bold;}
+        
+        .task-item {
+            background: rgba(160, 189, 151, 0.15); padding: 10px; border-radius: 8px; margin-bottom: 10px;
+            font-size: 13px; display: flex; align-items: center; justify-content: space-between; gap: 5px;
+            transition: 0.2s; word-break: break-all; color: var(--text-main); border: 1px solid transparent;
+        }
+        .task-item:hover { border-color: var(--secondary-color); background: #FFF;}
+        .task-item.done { opacity: 0.6; background: #F0F0F0; }
+        .task-item.done .task-text { text-decoration: line-through; }
+        
+        .task-content { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; flex: 1; }
+        .task-check { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--primary-color); display: inline-block; flex-shrink: 0; margin-top: 2px;}
+        .task-item.done .task-check { background: var(--primary-color); }
+        
+        .task-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.2s; }
+        .task-item:hover .task-actions { opacity: 1; }
+        .task-actions span { cursor: pointer; font-size: 12px; padding: 2px; }
+        .task-actions span:hover { transform: scale(1.2); }
+        
+        /* 顶部工具栏 */
+        .toolbar { display: flex; gap: 10px; background: rgba(189, 176, 125, 0.1); padding: 15px; border-radius: 15px; align-items: center; }
+        .toolbar select { width: 110px; }
+        .toolbar input { flex: 1; }
+
+    </style>
+</head>
+<body>
+
+    <!-- 左侧菜单 -->
+    <div class="sidebar">
+        <div class="logo">🦠 微生物工作台</div>
+        <div class="nav-item active" onclick="switchPage('page-home', this)">🏠 今日首页</div>
+        <div class="nav-item" onclick="switchPage('page-calendar', this)">📅 学习签到</div>
+        <div class="nav-item" onclick="switchPage('page-diary', this)">📝 学习日记</div>
+        <div class="nav-item" onclick="switchPage('page-todo', this)">✅ 周计划待办</div>
+    </div>
+
+    <!-- 右侧内容 -->
+    <div class="main-content">
+        
+        <!-- 新增模块 0：今日首页 -->
+        <div id="page-home" class="page-section active">
+            <!-- 每日名言区 -->
+            <div class="hero-section">
+                <div class="quote-mark">“</div>
+                <div class="hero-date" id="homeDate"></div>
+                <div class="quote-text" id="quoteText">加载中...</div>
+                <div class="quote-author" id="quoteAuthor">—— 加载中</div>
+            </div>
+
+            <!-- 概览卡片 -->
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-title">📌 今日待办提醒</div>
+                    <div id="homeTasks" style="line-height: 2; font-size: 14px; color: var(--text-sub);">
+                        <!-- JS动态生成 -->
+                    </div>
+                    <button onclick="switchPage('page-todo', document.querySelectorAll('.nav-item')[3])" style="margin-top: 15px; width: 100%;">前往周计划</button>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">🌿 签到状态</div>
+                    <div id="homeCheckinStatus" style="font-size: 16px; text-align: center; padding: 20px 0; color: var(--primary-color); font-weight: bold;">
+                        <!-- JS动态生成 -->
+                    </div>
+                    <button onclick="switchPage('page-calendar', document.querySelectorAll('.nav-item')[1])" style="width: 100%; background: var(--secondary-color);">前往签到日历</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模块 1：签到日历 -->
+        <div id="page-calendar" class="page-section">
+            <div class="card">
+                <div class="card-title">📅 本月学习签到</div>
+                <p style="font-size: 13px; color: var(--text-sub); margin-bottom: 20px;">点击日期即可签到/取消签到，记录你的努力轨迹！</p>
+                <div id="calendarHeader" style="font-size: 20px; font-weight: bold; color: var(--primary-color); margin-bottom: 20px; text-align: center; letter-spacing: 2px;"></div>
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- JS动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 模块 2：发帖日记 -->
+        <div id="page-diary" class="page-section">
+            <div class="card">
+                <div class="card-title">📝 今天学了什么？</div>
+                
+                <div class="post-input-area" id="postInputArea">
+                    <input type="text" id="postTitleInput" placeholder="标题：例如 彻底搞懂了细菌生长曲线...">
+                    <textarea id="postContentInput" placeholder="今天的学习笔记/心得..."></textarea>
+                    <div style="text-align: right;">
+                        <button class="btn-cancel" id="cancelEditBtn" style="display: none;" onclick="cancelEdit()">取消</button>
+                        <button id="submitPostBtn" onclick="submitPost()">发布日记 🚀</button>
+                    </div>
+                </div>
+                
+                <div class="post-list" id="postList"></div>
+            </div>
+        </div>
+
+        <!-- 模块 3：周视图待办 -->
+        <div id="page-todo" class="page-section">
+            <div class="card">
+                <div class="card-title">✅ 本周待办事项</div>
+                
+                <div class="toolbar">
+                    <select id="taskDaySelect">
+                        <option value="周一">周一</option><option value="周二">周二</option>
+                        <option value="周三">周三</option><option value="周四">周四</option>
+                        <option value="周五">周五</option><option value="周六">周六</option><option value="周日">周日</option>
+                    </select>
+                    <input type="text" id="taskInput" placeholder="输入学习任务..." onkeypress="if(event.key==='Enter') addWeeklyTask()">
+                    <button onclick="addWeeklyTask()">添加</button>
+                </div>
+
+                <div class="week-view" id="weekView"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 名言库 ---
+        const quotes = [
+            { text: "在观察的领域中，机遇只偏爱那种有准备的头脑。", author: "路易·巴斯德" },
+            { text: "科学是使人的精神变得勇敢的最好途径。", author: "亚历山大·弗莱明" },
+            { text: "青蒿一握，以水二升渍，绞取汁，尽服之。", author: "屠呦呦" },
+            { text: "我们必须接受失望，因为它是有限的；但千万不可失去希望，因为它是无穷的。", author: "马丁·路德·金" },
+            { text: "路漫漫其修远兮，吾将上下而求索。", author: "屈原" },
+            { text: "不要害怕失败，害怕的是你连尝试的勇气都没有。", author: "佚名" },
+            { text: "生命的意义不在于长短，而在于我们如何度过。", author: "蒙田" },
+            { text: "自然界中每一个微小的生命，都有其存在的伟大意义。", author: "现代微生物学箴言" }
+        ];
+
+        // --- 页面切换逻辑 ---
+        function switchPage(pageId, navElement) {
+            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            navElement.classList.add('active');
+            if(pageId === 'page-home') renderHome();
+        }
+
+        // ==========================================
+        // 功能 0：首页渲染
+        // ==========================================
+        function renderHome() {
+            // 1. 渲染日期
+            const now = new Date();
+            const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+            document.getElementById('homeDate').textContent = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 · ${weekDays[now.getDay()]}`;
+
+            // 2. 渲染每日名言 (根据日期取模，保证每天固定)
+            const daySeed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate();
+            const quoteIndex = daySeed % quotes.length;
+            document.getElementById('quoteText').textContent = quotes[quoteIndex].text;
+            document.getElementById('quoteAuthor').textContent = `—— ${quotes[quoteIndex].author}`;
+
+            // 3. 渲染待办提醒
+            const todayMap = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+            const todayStr = todayMap[now.getDay()];
+            const todayTasks = weeklyTasks.filter(t => t.day === todayStr && !t.done);
+            
+            const taskContainer = document.getElementById('homeTasks');
+            if(todayTasks.length === 0) {
+                taskContainer.innerHTML = '<p style="color: var(--primary-color);">🎉 今天没有未完成的计划，好好休息吧！</p>';
+            } else {
+                taskContainer.innerHTML = todayTasks.map(t => `<div>🔹 ${t.text}</div>`).join('');
+            }
+
+            // 4. 渲染签到状态
+            const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+            const statusContainer = document.getElementById('homeCheckinStatus');
+            if(checkinData[dateKey]) {
+                statusContainer.innerHTML = '✅ 今天已打卡，继续保持！';
+            } else {
+                statusContainer.innerHTML = '⏳ 今天还未签到，去记录一下吧！';
+                statusContainer.style.color = 'var(--text-sub)';
+            }
+        }
+
+        // ==========================================
+        // 功能 1：签到日历
+        // ==========================================
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth(); 
+        const todayDate = now.getDate();
+        
+        let checkinData = JSON.parse(localStorage.getItem('microCheckins')) || {};
+
+        function renderCalendar() {
+            document.getElementById('calendarHeader').textContent = `${currentYear}年 ${currentMonth + 1}月`;
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            const daysOfWeek = ['一', '二', '三', '四', '五', '六', '日'];
+            daysOfWeek.forEach(d => grid.innerHTML += `<div class="cal-head">${d}</div>`);
+
+            let firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            if(firstDay === 0) firstDay = 7; 
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+            for (let i = 1; i < firstDay; i++) {
+                grid.innerHTML += `<div></div>`;
+            }
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dateKey = `${currentYear}-${currentMonth + 1}-${i}`;
+                const isToday = i === todayDate ? 'today' : '';
+                const isChecked = checkinData[dateKey] ? 'checked' : '';
+                grid.innerHTML += `<div class="cal-day ${isToday} ${isChecked}" onclick="toggleCheckin('${dateKey}', this)">${i}</div>`;
+            }
+        }
+
+        function toggleCheckin(dateKey, element) {
+            if (checkinData[dateKey]) {
+                delete checkinData[dateKey];
+                element.classList.remove('checked');
+            } else {
+                checkinData[dateKey] = true;
+                element.classList.add('checked');
+            }
+            localStorage.setItem('microCheckins', JSON.stringify(checkinData));
+        }
+
+        // ==========================================
+        // 功能 2：发帖日记 (支持增删改)
+        // ==========================================
+        let posts = JSON.parse(localStorage.getItem('microPosts')) || [
+            {
+                id: 1,
+                title: "关于细菌内毒素的复习",
+                content: "内毒素主要是革兰氏阴性菌细胞壁的脂多糖（LPS），只有菌体死亡裂解后才释放。毒性成分是脂质A。",
+                time: "2024-11-20 10:00",
+                replies: [{ user: "热心同学A", text: "总结得真好，那外毒素有什么特点呢？" }]
+            }
+        ];
+        let editingPostId = null; 
+
+        function savePosts() { localStorage.setItem('microPosts', JSON.stringify(posts)); }
+
+        function renderPosts() {
+            const list = document.getElementById('postList');
+            list.innerHTML = '';
+            posts.forEach(post => {
+                let repliesHtml = '';
+                if (post.replies && post.replies.length > 0) {
+                    repliesHtml += `<div class="reply-list">`;
+                    post.replies.forEach(reply => {
+                        repliesHtml += `<div class="reply-item"><strong>${reply.user}:</strong> ${reply.text}</div>`;
+                    });
+                    repliesHtml += `</div>`;
+                }
+
+                const actionHtml = `
+                    <div class="post-actions">
+                        <button class="action-btn" onclick="editPost(${post.id})">✏️ 修改</button>
+                        <button class="action-btn delete" onclick="deletePost(${post.id})">🗑️ 删除</button>
+                    </div>
+                `;
+
+                list.innerHTML += `
+                    <div class="post-item">
+                        ${actionHtml}
+                        <div class="post-header">${post.title}</div>
+                        <div class="post-time">${post.time} ${post.edited ? '<span style="color:#D32F2F;">(已修改)</span>' : ''}</div>
+                        <div class="post-content">${post.content}</div>
+                        ${repliesHtml}
+                        <div class="reply-input-group">
+                            <input type="text" id="reply-input-${post.id}" placeholder="模拟访客回复...">
+                            <button onclick="addReply(${post.id})">回复</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function submitPost() {
+            const titleInput = document.getElementById('postTitleInput');
+            const contentInput = document.getElementById('postContentInput');
+            const title = titleInput.value.trim();
+            const content = contentInput.value.trim();
+            
+            if(!title || !content) return alert('请填写标题和内容哦！');
+
+            if (editingPostId) {
+                const postIndex = posts.findIndex(p => p.id === editingPostId);
+                if(postIndex > -1) {
+                    posts[postIndex].title = title;
+                    posts[postIndex].content = content;
+                    posts[postIndex].edited = true;
+                }
+                cancelEdit(); 
+            } else {
+                const now = new Date();
+                const timeStr = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}`;
+                posts.unshift({ id: Date.now(), title: title, content: content, time: timeStr, replies: [], edited: false });
+                titleInput.value = '';
+                contentInput.value = '';
+            }
+            savePosts();
+            renderPosts();
+        }
+
+        function editPost(id) {
+            const post = posts.find(p => p.id === id);
+            if(!post) return;
+            editingPostId = id;
+            document.getElementById('postTitleInput').value = post.title;
+            document.getElementById('postContentInput').value = post.content;
+            document.getElementById('submitPostBtn').textContent = "保存修改 💾";
+            document.getElementById('cancelEditBtn').style.display = 'inline-block';
+            document.getElementById('postInputArea').classList.add('editing');
+            document.querySelector('.main-content').scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            editingPostId = null;
+            document.getElementById('postTitleInput').value = '';
+            document.getElementById('postContentInput').value = '';
+            document.getElementById('submitPostBtn').textContent = "发布日记 🚀";
+            document.getElementById('cancelEditBtn').style.display = 'none';
+            document.getElementById('postInputArea').classList.remove('editing');
+        }
+
+        function deletePost(id) {
+            if(confirm('确定要删除这篇日记吗？')) {
+                posts = posts.filter(p => p.id !== id);
+                savePosts();
+                renderPosts();
+                if(editingPostId === id) cancelEdit(); 
+            }
+        }
+
+        function addReply(postId) {
+            const input = document.getElementById(`reply-input-${postId}`);
+            const text = input.value.trim();
+            if(!text) return;
+            const postIndex = posts.findIndex(p => p.id === postId);
+            if(postIndex > -1) {
+                if(!posts[postIndex].replies) posts[postIndex].replies = [];
+                posts[postIndex].replies.push({ user: "访客", text: text });
+                savePosts();
+                renderPosts();
+            }
+        }
+
+        // ==========================================
+        // 功能 3：周视图待办
+        // ==========================================
+        let weeklyTasks = JSON.parse(localStorage.getItem('microWeeklyTasks')) || [
+            { id: 1, day: "周一", text: "精读耐药性文献", done: false },
+            { id: 2, day: "周三", text: "观察培养皿菌落", done: true }
+        ];
+
+        function saveWeeklyTasks() { localStorage.setItem('microWeeklyTasks', JSON.stringify(weeklyTasks)); }
+
+        function renderWeekView() {
+            const view = document.getElementById('weekView');
+            const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+            view.innerHTML = '';
+
+            days.forEach(day => {
+                const dayTasks = weeklyTasks.filter(t => t.day === day);
+                let tasksHtml = '';
+                dayTasks.forEach(task => {
+                    tasksHtml += `
+                        <div class="task-item ${task.done ? 'done' : ''}">
+                            <div class="task-content" onclick="toggleTask(${task.id})">
+                                <div class="task-check"></div>
+                                <span class="task-text">${task.text}</span>
+                            </div>
+                            <div class="task-actions">
+                                <span onclick="editTask(${task.id}, event)" title="修改">✏️</span>
+                                <span onclick="deleteTask(${task.id}, event)" title="删除">🗑️</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                view.innerHTML += `
+                    <div class="day-column">
+                        <h3>${day}</h3>
+                        <div>${tasksHtml}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function addWeeklyTask() {
+            const input = document.getElementById('taskInput');
+            const day = document.getElementById('taskDaySelect').value;
+            const text = input.value.trim();
+            if(!text) return;
+            weeklyTasks.push({ id: Date.now(), day: day, text: text, done: false });
+            saveWeeklyTasks();
+            renderWeekView();
+            input.value = '';
+        }
+
+        function toggleTask(id) {
+            weeklyTasks = weeklyTasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
+            saveWeeklyTasks();
+            renderWeekView();
+            if(document.getElementById('page-home').classList.contains('active')) renderHome();
+        }
+
+        function editTask(id, event) {
+            if(event) event.stopPropagation();
+            const task = weeklyTasks.find(t => t.id === id);
+            if(!task) return;
+            const newText = prompt("请输入修改后的任务内容：", task.text);
+            if (newText !== null && newText.trim() !== "") {
+                task.text = newText.trim();
+                saveWeeklyTasks();
+                renderWeekView();
+                if(document.getElementById('page-home').classList.contains('active')) renderHome();
+            }
+        }
+
+        function deleteTask(id, event) {
+            if(event) event.stopPropagation();
+            if(confirm("确定要删除这个待办事项吗？")) {
+                weeklyTasks = weeklyTasks.filter(t => t.id !== id);
+                saveWeeklyTasks();
+                renderWeekView();
+                if(document.getElementById('page-home').classList.contains('active')) renderHome();
+            }
+        }
+
+        // --- 页面初始化 ---
+        window.onload = () => {
+            renderHome(); // 默认渲染首页
+            renderCalendar();
+            renderPosts();
+            renderWeekView();
+        };
+
+    </script>
+</body>
+</html>
